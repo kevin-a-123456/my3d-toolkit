@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>My3D Viewer v2 (UV 诊断版)</title>
+    <style>
+        body { margin:0; overflow:hidden; background:#1a1a2e; font-family:Arial; }
+        #drop { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+                color:white; text-align:center; font-size:24px; 
+                border:3px dashed #8888cc; padding:60px; border-radius:20px;
+                background:rgba(0,0,0,0.3); backdrop-filter:blur(4px);
+                z-index:10; pointer-events:auto; }
+        #drop.dragover { border-color:#00ff88; background:rgba(0,255,136,0.1); }
+        #drop input { display:none; }
+        #info { position:absolute; bottom:20px; left:50%; transform:translateX(-50%);
+                color:#aaa; font-size:14px; background:rgba(0,0,0,0.7);
+                padding:10px 24px; border-radius:20px; z-index:5; }
+        #info.loaded { color:#88ff88; }
+        #info.error { color:#ff6666; }
+    </style>
+</head>
+<body>
+    <div id="drop">
+        📁 拖拽 .my3d 文件<br>
+        <span style="font-size:14px;color:#888;">或点击选择</span>
+        <input type="file" id="fileInput" accept=".my3d">
+    </div>
+    <div id="info">拖入 .my3d 查看</div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // 场景、相机、渲染器
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+        camera.position.set(3, 2, 5);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // 灯光
+        const ambient = new THREE.AmbientLight(0x404060);
+        scene.add(ambient);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLight.position.set(2, 5, 3);
+        scene.add(dirLight);
+        const gridHelper = new THREE.GridHelper(5, 20, 0x6666aa, 0x444477);
+        scene.add(gridHelper);
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        const dropZone = document.getElementById('drop');
+        const fileInput = document.getElementById('fileInput');
+        const info = document.getElementById('info');
+
+        // ========== 解析 .my3d (v2) ==========
+        function parseMy3d(arrayBuffer) {
+            const dv = new DataView(arrayBuffer);
+            let offset = 0;
+
+            const magic = String.fromCharCode(...new Uint8Array(arrayBuffer, 0, 4));
+            if (magic !== 'MY3D') throw new Error('无效文件头');
+
+            offset += 4;
+            const version = dv.getUint32(offset, true); offset += 4;
+            if (version !== 2) throw new Error(`仅支持 v2 (当前 v${version})`);
+
+            const vertCount = dv.getUint32(offset, true); offset += 4;
+            const faceCount = dv.getUint32(offset, true); offset += 4;
+            const texW = dv.getUint16(offset, true); offset += 2;
+            const texH = dv.getUint16(offset, true); offset += 2;
+            const flags = dv.getUint8(offset); offset += 1;
+            offset += 11;
+
+            console.log(`📊 顶点:${vertCount} 面:${faceCount} 纹理:${texW}x${texH}`);
+
+            // 读取顶点
+            const positions = [];
+            for (let i=0; i<vertCount*3; i++) {
+                positions.push(dv.getFloat32(offset, true)); offset += 4;
+            }
+
+            // 读取 UV
+            const uvs = [];
+            for (let i=0; i<vertCount*2; i++) {
+                uvs.push(dv.getFloat32(offset, true)); offset += 4;
+            }
+
+            // ========== UV 诊断 ==========
+            console.log('🔍 UV 诊断:');
+            console.log(`   前 5 个 UV:`);
+            for (let i=0; i<Math.min(5, vertCount); i++) {
+                console.log(`      ${i}: (${uvs[i*2].toFixed(3)}, ${uvs[i*2+1].toFixed(3)})`);
+            }
+            // 检查 UV 是否全为 0
+            const allZero = uvs.every(v => v === 0);
+            if (allZero) {
+                console.warn('⚠️ 所有 UV 都是 0，自动生成平面 UV');
+                // 根据顶点位置生成平面 UV
+                const posArray = new Float32Array(positions);
+                const minX = Math.min(...positions.filter((_,i)=>i%3===0));
+                const maxX = Math.max(...positions.filter((_,i)=>i%3===0));
+                const minZ = Math.min(...positions.filter((_,i)=>i%3===2));
+                const maxZ = Math.max(...positions.filter((_,i)=>i%3===2));
+                const rangeX = maxX - minX || 1;
+                const rangeZ = maxZ - minZ || 1;
+                for (let i=0; i<vertCount; i++) {
+                    const x = positions[i*3];
+                    const z = positions[i*3+2];
+                    uvs[i*2] = (x - minX) / rangeX;
+                    uvs[i*2+1] = (z - minZ) / rangeZ;
+                }
+                console.log('✅ 已生成平面 UV');
+            } else {
+                // 检查 UV 范围
+                let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
+                for (let i=0; i<vertCount; i++) {
+                    const u = uvs[i*2], v = uvs[i*2+1];
+                    if (u < minU) minU = u;
+                    if (u > maxU) maxU = u;
+                    if (v < minV) minV = v;
+                    if (v > maxV) maxV = v;
+                }
+                console.log(`   U 范围: [${minU.toFixed(3)}, ${maxU.toFixed(3)}]`);
+                console.log(`   V 范围: [${minV.toFixed(3)}, ${maxV.toFixed(3)}]`);
+
+                // 自动修正：如果 V 方向是反的（大多数 OBJ 的 V 是 0 在底部，而很多软件存的是顶部）
+                // 检测：如果 V 最小值接近 1，最大值接近 0，说明是反的，可以翻转
+                if (minV > 0.5 && maxV > 0.5) {
+                    console.warn('⚠️ V 坐标似乎反了，自动翻转');
+                    for (let i=0; i<vertCount; i++) {
+                        uvs[i*2+1] = 1 - uvs[i*2+1];
+                    }
+                }
+            }
+
+            // 读取面
+            const indices = [];
+            for (let i=0; i<faceCount*3; i++) {
+                indices.push(dv.getUint32(offset, true)); offset += 4;
+            }
+
+            // 纹理数据
+            const remaining = new Uint8Array(arrayBuffer, offset);
+            let texData = null;
+            if (flags & 1) {
+                if (typeof pako === 'undefined') throw new Error('pako 未加载');
+                texData = pako.inflate(remaining);
+                console.log(`✅ 解压纹理: ${texData.length} 字节`);
+            } else {
+                texData = remaining;
+            }
+
+            return { positions, uvs, indices, texW, texH, texData };
+        }
+
+        // ========== 构建网格 ==========
+        function buildMesh(data) {
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(data.positions, 3));
+            geometry.setAttribute('uv', new THREE.Float32BufferAttribute(data.uvs, 2));
+            geometry.setIndex(data.indices);
+            geometry.computeVertexNormals();
+
+            let texture = null;
+            if (data.texData && data.texW > 0 && data.texH > 0) {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = data.texW;
+                    canvas.height = data.texH;
+                    const ctx = canvas.getContext('2d');
+                    const imageData = ctx.createImageData(data.texW, data.texH);
+                    const src = data.texData;
+                    for (let i=0; i<data.texW*data.texH; i++) {
+                        const idx = i*4;
+                        const srcIdx = i*3;
+                        imageData.data[idx] = src[srcIdx];
+                        imageData.data[idx+1] = src[srcIdx+1];
+                        imageData.data[idx+2] = src[srcIdx+2];
+                        imageData.data[idx+3] = 255;
+                    }
+                    ctx.putImageData(imageData, 0, 0);
+                    texture = new THREE.CanvasTexture(canvas);
+                    texture.needsUpdate = true;
+                    console.log('✅ 纹理加载成功');
+                } catch(e) {
+                    console.warn('纹理生成失败:', e);
+                }
+            }
+
+            if (!texture) {
+                // 备用棋盘格
+                const canvas = document.createElement('canvas');
+                canvas.width = 256;
+                canvas.height = 256;
+                const ctx = canvas.getContext('2d');
+                for (let i=0; i<8; i++) {
+                    for (let j=0; j<8; j++) {
+                        ctx.fillStyle = (i+j)%2===0 ? '#cccccc' : '#666666';
+                        ctx.fillRect(i*32, j*32, 32, 32);
+                    }
+                }
+                texture = new THREE.CanvasTexture(canvas);
+                console.warn('使用棋盘格纹理');
+            }
+
+            const material = new THREE.MeshStandardMaterial({
+                map: texture,
+                roughness: 0.6,
+                metalness: 0.1,
+                side: THREE.DoubleSide
+            });
+
+            const mesh = new THREE.Mesh(geometry, material);
+            // 归一化
+            const box = new THREE.Box3().setFromObject(mesh);
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+            if (maxDim > 0) mesh.scale.multiplyScalar(2.0 / maxDim);
+            return mesh;
+        }
+
+        // ========== 文件加载 ==========
+        function loadFile(file) {
+            if (!file.name.endsWith('.my3d')) {
+                info.textContent = '⚠️ 请选择 .my3d 文件';
+                info.className = 'error';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = parseMy3d(e.target.result);
+                    const mesh = buildMesh(data);
+
+                    // 清除旧模型（保留灯光、网格）
+                    while (scene.children.length > 0) {
+                        const child = scene.children[0];
+                        if (['AmbientLight','DirectionalLight','GridHelper'].includes(child.type)) {
+                            scene.children.shift();
+                            continue;
+                        }
+                        scene.remove(child);
+                    }
+                    scene.add(ambient);
+                    scene.add(dirLight);
+                    scene.add(gridHelper);
+                    scene.add(mesh);
+                    controls.target.set(0,0,0);
+                    controls.update();
+
+                    const msg = `✅ ${file.name} | 顶点:${data.positions.length/3} 面:${data.indices.length/3}`;
+                    info.textContent = msg;
+                    info.className = 'loaded';
+                    dropZone.style.display = 'none';
+                } catch(err) {
+                    info.textContent = '❌ 解析失败: ' + err.message;
+                    info.className = 'error';
+                    console.error(err);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 事件
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) loadFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) loadFile(e.target.files[0]);
+            fileInput.value = '';
+        });
+
+        console.log('🚀 My3D Viewer (UV 诊断版) 已启动');
+    </script>
+</body>
+</html>
