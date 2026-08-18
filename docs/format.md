@@ -108,6 +108,9 @@ def load_my3d(filepath):
             tex_data = zlib.decompress(tex_data)
 
         texture = Image.frombytes('RGB', (tex_w, tex_h), tex_data)
+
+```
+
 Version History
 Version	Changes
 v1	Basic format, no compression
@@ -118,5 +121,3 @@ The design philosophy of .my3d is:
 "A 3D format should be understandable in 10 minutes."
 
 No complex nesting. No JSON. No external dependencies. Just a binary file you can read byte by byte.
-
-text
