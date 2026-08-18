@@ -160,7 +160,4 @@ Three.js — Web viewer
 Open an issue on GitHub or reach out via the discussion board.
 
 Made with ❤️ by a teenage developer
-
-text
-
 ---
