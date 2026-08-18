@@ -82,7 +82,7 @@ python model_tool.py diagnose model.my3d
 📁 File Format (.my3d v2)
 The format is intentionally simple:
 
-text
+```text
 ┌──────────────────────────────────────────┐
 │  HEADER (32 bytes)                      │
 │  - Magic: "MY3D"                        │
@@ -99,6 +99,7 @@ text
 │  - Uncompressed: raw RGB bytes          │
 │  - Compressed: zlib stream              │
 └──────────────────────────────────────────┘
+```
 Total header: 32 bytes. That's it!
 
 🖼️ Viewers
