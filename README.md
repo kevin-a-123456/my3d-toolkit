@@ -121,12 +121,15 @@ No installation needed!
 
 🛠️ Supported Input Formats
 Format	Extension	Texture
+```text
 Wavefront OBJ	.obj	✅ Auto-extract
 GLTF / GLB	.gltf / .glb	✅ Built-in
 STL	.stl	❌ (generates checkerboard)
 PLY	.ply	⚠️ Vertex colors
 Collada DAE	.dae	✅
 3MF	.3mf	✅
+```
+
 🗺️ Roadmap
 ```text
 ☑ v1: Basic OBJ to .my3d conversion
