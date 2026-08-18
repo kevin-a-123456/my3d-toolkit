@@ -2,6 +2,7 @@
 .my3d is a simple binary 3D model format that stores geometry, UV coordinates, faces, and texture data in a single file. It's designed to be easy to parse, debug, and implement.
 
 ## File Structure
+```text
 +------------------+
 | HEADER (32 bytes) |
 +------------------+
@@ -17,8 +18,7 @@
 | TEXTURE DATA |
 | (RGB or zlib) |
 +------------------+
-
-text
+```
 
 ## Header (32 bytes)
 
