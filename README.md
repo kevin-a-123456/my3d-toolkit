@@ -50,8 +50,8 @@ You'll see:
 
 ```text
 ╔══════════════════════════════════════════════════════════╗
-║   🎮 My3D Model Tool v2.0                              ║
-║   OBJ/GLTF/STL → .my3d Converter & Viewer             ║
+║   My3D Model Tool v2.0                                   ║
+║   OBJ/GLTF/STL → .my3d Converter & Viewer                ║
 ╚══════════════════════════════════════════════════════════╝
 ```
 
