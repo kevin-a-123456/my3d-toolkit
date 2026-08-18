@@ -108,11 +108,9 @@ bash
 python model_tool.py view model.my3d
 Controls:
 
-Left drag → Rotate
+Right drag → Rotate
 
 Scroll → Zoom
-
-Right drag → Pan
 
 ESC → Exit
 
