@@ -128,6 +128,7 @@ PLY	.ply	⚠️ Vertex colors
 Collada DAE	.dae	✅
 3MF	.3mf	✅
 🗺️ Roadmap
+```text
 ☑ v1: Basic OBJ to .my3d conversion
 ☑ v2: zlib compression + Ursina viewer
 ☑ Web viewer (Three.js)
@@ -135,6 +136,7 @@ Collada DAE	.dae	✅
 □ v3: Multi-material support
 □ Blender import/export plugin
 □ Unity loader
+```
 🤝 Contributing
 Found a bug? Have an idea? Feel free to:
 
