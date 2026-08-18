@@ -30,12 +30,16 @@ My3D is a custom 3D model format I designed as a teenager. It stores **vertices,
 
 ```bash
 pip install pillow numpy trimesh ursina
-2. Download the tool
+```
+
+### 2. Download the tool
 Just download model_tool.py and run it.
 
-3. Convert your first model
-bash
+### 3. Convert your first model
+```python
 python model_tool.py convert model.obj
+```
+
 That's it! You'll get model.my3d.
 
 📖 Usage
@@ -60,6 +64,7 @@ Select an option:
   0. Exit
 Command Line
 bash
+
 # Convert model to .my3d
 python model_tool.py convert model.obj
 
