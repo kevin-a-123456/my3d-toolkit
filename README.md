@@ -48,11 +48,12 @@ bash
 python model_tool.py
 You'll see:
 
-text
+```text
 ╔══════════════════════════════════════════════════════════╗
 ║   🎮 My3D Model Tool v2.0                              ║
 ║   OBJ/GLTF/STL → .my3d Converter & Viewer             ║
 ╚══════════════════════════════════════════════════════════╝
+```
 
 Select an option:
   1. Convert OBJ/GLTF/STL → .my3d
