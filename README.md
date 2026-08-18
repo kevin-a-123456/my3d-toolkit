@@ -115,7 +115,7 @@ Scroll → Zoom
 ESC → Exit
 
 Web Viewer (Browser)
-Open viewer.html in your browser, then drag & drop your .my3d file.
+Open my3d_viewer.html in your browser, then drag & drop your .my3d file.
 
 No installation needed!
 
